@@ -1,6 +1,7 @@
 window.addEventListener("load", function (evt) {
   var output = document.getElementById("output");
   var input = document.getElementById("input");
+  var name = document.getElementById("name");
   var ws;
 
   var print = function (message) {
@@ -23,7 +24,7 @@ window.addEventListener("load", function (evt) {
       ws = null;
     };
     ws.onmessage = function (evt) {
-      print("RESPONSE: " + evt.data);
+      print(evt.data);
     };
     ws.onerror = function (evt) {
       print("ERROR: " + evt.data);
@@ -35,8 +36,9 @@ window.addEventListener("load", function (evt) {
     if (!ws) {
       return false;
     }
-    print("SEND: " + input.value);
-    ws.send(input.value);
+    //print("SEND: " + input.value);
+    ws.send(name.value + ":" + input.value);
+    input.value = "";
     return false;
   };
 
