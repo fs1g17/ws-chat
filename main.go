@@ -1,59 +1,32 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"io"
 	"log"
 	"net/http"
 
 	"github.com/coder/websocket"
 )
 
-func serve(w http.ResponseWriter, r *http.Request) {
+func serve(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	c, err := websocket.Accept(w, r, nil)
 	if err != nil {
-		log.Printf("%v", err)
+		log.Printf("error1: %v", err)
 		return
 	}
-	defer c.CloseNow()
-
-	for {
-		err = echo(c)
-		if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-			return
-		}
-		if err != nil {
-			fmt.Printf("error: %v", err)
-			return
-		}
-	}
-}
-
-func echo(c *websocket.Conn) error {
-	ctx := context.Background()
-	typ, r, err := c.Reader(ctx)
-	if err != nil {
-		return err
-	}
-
-	w, err := c.Writer(ctx, typ)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return fmt.Errorf("failed to io.Copy: %w", err)
-	}
-
-	err = w.Close()
-	return err
+	client := &Client{hub: hub, send: make(chan []byte), conn: c}
+	hub.register <- client
+	go client.read()
+	go client.write()
 }
 
 func main() {
+	hub := newHub()
+	go hub.run()
+
 	http.Handle("/", http.FileServer(http.Dir("./static")))
-	http.HandleFunc("/api/echo", serve)
+	http.HandleFunc("/api/echo", func(w http.ResponseWriter, r *http.Request) {
+		serve(hub, w, r)
+	})
 
 	http.ListenAndServe(":8080", nil)
 }
