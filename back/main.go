@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -13,7 +14,8 @@ func serve(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		log.Printf("error1: %v", err)
 		return
 	}
-	client := &Client{hub: hub, send: make(chan []byte), conn: c}
+	ctx, cancel := context.WithCancel(context.Background())
+	client := &Client{hub: hub, send: make(chan []byte), conn: c, ctx: ctx, cancel: cancel}
 	hub.register <- client
 	go client.read()
 	go client.write()

@@ -2,31 +2,25 @@ package main
 
 import (
 	"context"
-	"log"
 
 	"github.com/coder/websocket"
 )
 
 type Client struct {
-	hub  *Hub
-	send chan []byte
-	conn *websocket.Conn
+	hub    *Hub
+	send   chan []byte
+	conn   *websocket.Conn
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func (c *Client) read() {
-	ctx := context.Background()
+	defer c.cancel()
+
 	for {
-		_, r, err := c.conn.Read(ctx)
+		_, r, err := c.conn.Read(c.ctx)
 		if err != nil {
-			if websocket.CloseStatus(err) == websocket.StatusNormalClosure ||
-				websocket.CloseStatus(err) == websocket.StatusGoingAway {
-				// websocket hung up on the other end
-				log.Println("socket hung up on the other end, unregistering")
-				c.hub.unregister <- c
-				return
-			}
-			log.Printf("error in read: %v\n", err)
-			c.conn.Close(websocket.StatusInternalError, "error")
+			c.hub.unregister <- c
 			return
 		}
 		c.hub.message <- r
@@ -34,21 +28,18 @@ func (c *Client) read() {
 }
 
 func (c *Client) write() {
-	ctx := context.Background()
+	defer c.cancel()
+
 	for {
-		msg := <-c.send
-		err := c.conn.Write(ctx, websocket.MessageText, msg)
-		if err != nil {
-			if websocket.CloseStatus(err) == websocket.StatusNormalClosure ||
-				websocket.CloseStatus(err) == websocket.StatusGoingAway {
-				// websocket hung up on the other end
-				log.Println("socket hung up on the other end, unregistering")
+		select {
+		case <-c.ctx.Done():
+			return
+		case msg := <-c.send:
+			err := c.conn.Write(c.ctx, websocket.MessageText, msg)
+			if err != nil {
 				c.hub.unregister <- c
 				return
 			}
-			log.Printf("error in write: %v\n", err)
-			c.conn.Close(websocket.StatusInternalError, "error")
-			return
 		}
 	}
 }

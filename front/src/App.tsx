@@ -38,7 +38,7 @@ function App() {
     const socket = new WebSocket("ws://localhost:8080/api/echo");
 
     // Connection opened
-    socket.addEventListener("open", (event) => {
+    socket.addEventListener("open", () => {
       console.log("Connection established!");
     });
 
@@ -49,17 +49,23 @@ function App() {
       setMessages((prev) => [...prev, message]);
     });
 
+    socket.addEventListener("close", (event) => {
+      console.log(`OnClose: ${event.code} ${event.reason}`);
+    });
+
     connection.current = socket;
 
     return () => {
       console.log("running cleanup");
-      connection.current.close();
-      connection.current = null;
+      if (connection.current) {
+        connection.current.close();
+        connection.current = null;
+      }
     };
   }, []);
 
   const onSend = () => {
-    if (!connection) return;
+    if (!connection.current) return;
 
     connection.current.send(JSON.stringify({ name, content }));
     setContent("");
