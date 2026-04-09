@@ -14,11 +14,20 @@ import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useEffect, useRef, useState } from "react";
+import { cn } from "./lib/utils";
 
 interface Message {
   name: string;
   content: string;
 }
+
+type Status = "open" | "connecting" | "closed";
+
+const statusClassMap = {
+  open: "bg-green-200",
+  connecting: "bg-yello-200",
+  closed: "bg-gray-200",
+};
 
 function App() {
   const [name, setName] = useState<string>("");
@@ -26,6 +35,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([]);
 
   const connection = useRef<WebSocket | null>(null);
+  const [status, setStatus] = useState<Status>("closed");
 
   useEffect(() => {
     if (connection.current) {
@@ -36,9 +46,11 @@ function App() {
     console.log("running websocket initialisation");
 
     const socket = new WebSocket("ws://localhost:8080/api/echo");
+    setStatus("connecting");
 
     // Connection opened
     socket.addEventListener("open", () => {
+      setStatus("open");
       console.log("Connection established!");
     });
 
@@ -50,6 +62,7 @@ function App() {
     });
 
     socket.addEventListener("close", (event) => {
+      setStatus("closed");
       console.log(`OnClose: ${event.code} ${event.reason}`);
     });
 
@@ -90,6 +103,9 @@ function App() {
                 </CardDescription>
               </div>
             </div>
+            <div
+              className={cn("w-4 h-4 rounded-full", statusClassMap[status])}
+            />
             <div className="flex flex-col gap-2 sm:max-w-xs">
               <Label htmlFor="display-name">Display name</Label>
               <Input
