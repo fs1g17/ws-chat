@@ -25,7 +25,7 @@ Need to have npm installed
 
 ### backend
 
-The backend uses the [https://github.com/coder/websocket](coder/websocket) implementation of WebSockets, but takes the approach largely from the [https://github.com/gorilla/websocket/tree/main/examples/chat](gorilla/websocket chat example).
+The backend uses the [coder/websocket](https://github.com/coder/websocket) implementation of WebSockets, but takes the approach largely from the [gorilla/websocket chat example](https://github.com/gorilla/websocket/tree/main/examples/chat).
 
 Each `Client` is represented by struct:
 
