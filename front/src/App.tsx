@@ -25,7 +25,7 @@ type Status = "open" | "connecting" | "closed";
 
 const statusClassMap = {
   open: "bg-green-200",
-  connecting: "bg-yello-200",
+  connecting: "bg-yellow-200",
   closed: "bg-gray-200",
 };
 
@@ -36,6 +36,8 @@ function App() {
 
   const connection = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<Status>("closed");
+
+  const [retryCounter, setRetryCounter] = useState<number>(0);
 
   useEffect(() => {
     if (connection.current) {
@@ -51,6 +53,7 @@ function App() {
     // Connection opened
     socket.addEventListener("open", () => {
       setStatus("open");
+      setRetryCounter(0);
       console.log("Connection established!");
     });
 
@@ -61,21 +64,33 @@ function App() {
       setMessages((prev) => [...prev, message]);
     });
 
-    socket.addEventListener("close", (event) => {
+    const closeEventListener = (event) => {
       setStatus("closed");
+      connection.current = null;
       console.log(`OnClose: ${event.code} ${event.reason}`);
-    });
+      setTimeout(
+        () => {
+          console.log("retrying");
+          setRetryCounter((prev) => prev + 1);
+        },
+        (1 + retryCounter) * 1000,
+      );
+    };
+
+    socket.addEventListener("close", closeEventListener);
 
     connection.current = socket;
 
     return () => {
       console.log("running cleanup");
       if (connection.current) {
+        console.log("running close");
+        connection.current.removeEventListener("close", closeEventListener);
         connection.current.close();
         connection.current = null;
       }
     };
-  }, []);
+  }, [retryCounter]);
 
   const onSend = () => {
     if (!connection.current) return;
